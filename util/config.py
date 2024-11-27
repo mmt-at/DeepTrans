@@ -65,14 +65,12 @@ logger = logging.getLogger("shared_logger")
 logger.setLevel(logging.DEBUG)
 
 import os
-print(os.getcwd())
-print(os.path.abspath(__file__))
 cur_folder = os.path.dirname(os.path.abspath(__file__))
 log_folder = os.path.join(cur_folder, "../logs")
 if not os.path.exists(log_folder):
     os.makedirs(log_folder)
 # 创建一个文件处理器
-file_handler = logging.FileHandler(os.path.join(log_folder, "translator.log"), encoding='utf-8')
+file_handler = logging.FileHandler(os.path.join(log_folder, "deeptrans.log"), encoding='utf-8')
 file_handler.setLevel(logging.DEBUG)
 
 # 创建一个日志格式器并将其添加到处理器

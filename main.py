@@ -1,6 +1,16 @@
 from coder.translator import CUDA2CTranslator
+from tools.compiler import CompilerCaller
 if __name__ == "__main__":
-    translator = CUDA2CTranslator(model="gpt-4o")
+    compiler = CompilerCaller("C")
+    import os
+    data_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+    repo_name = "test"
+    target_func_name = "computeCov3D"
+    # build_dir = compiler.build(position=data_folder, level="repo", lang="c", name=repo_name, target_func_name=target_func_name, inplace=False)
+    # compiler.run_executable(build_dir, function_name=target_func_name)
+    compiler.lowering(position=data_folder, level="repo", lang="c", name=repo_name, target_func_name=target_func_name, inplace=False)
+    exit(0)
+    translator = CUDA2CTranslator(model="deepseek-coder")
     translator.translate("""// Forward method for converting scale and rotation properties of each
 // Gaussian to a 3D covariance matrix in world space. Also takes care
 // of quaternion normalization.

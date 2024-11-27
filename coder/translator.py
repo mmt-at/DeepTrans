@@ -80,10 +80,20 @@ class CPP2PythonTranslator(Translator):
         super().__init__(model, use_local, temperature, peft_model)
 
 class LowerToAladdinTranslator(Translator):
-    def __init__(self, model="gpt-3.5-turbo", use_local=False, temperature=0.3, peft_model=""):
+    def __init__(self, model="deepseek-coder", use_local=False, temperature=0.3, peft_model=""):
         self.src_lang = LangDesc("C", "11")
         self.tar_lang = LangDesc("C", "11")
         super().__init__(model, use_local, temperature, peft_model)
+
     @property
     def system_prompt(self):
         return f"You are a coding assistant to add Aladdin Accelerator calls to the following {self.src_lang} code."
+
+    def translate(self, code_str: str) -> str:
+        logger.info(f"Translating code from {self.src_lang} to {self.tar_lang}")
+        from coder.prompts import direct_replace_to_aladdin
+        prompt = direct_replace_to_aladdin.format(code_str=code_str)
+        # logger.info(f"Prompt:\n{prompt}")
+        resp = self.chat(prompt)
+        # logger.info(f"Lowering to Aladdin result:\n{resp}")
+        return resp
