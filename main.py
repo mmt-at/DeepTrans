@@ -1,6 +1,6 @@
 from coder.translator import CUDA2CTranslator
 if __name__ == "__main__":
-    translator = CUDA2CTranslator(model="deepseek-coder")
+    translator = CUDA2CTranslator(model="gpt-4o")
     translator.translate("""// Forward method for converting scale and rotation properties of each
 // Gaussian to a 3D covariance matrix in world space. Also takes care
 // of quaternion normalization.
