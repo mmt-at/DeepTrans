@@ -26,8 +26,8 @@ LLM4DSA/**
 LLM4DSA/*
 .env**
 .DS_Store**
-*.txt
-*.md
+# *.txt
+# *.md
 *.pdf
 *.docx
 *.doc
