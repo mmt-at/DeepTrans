@@ -21,7 +21,7 @@ def parse_transcoder_jsonl(file_path):
     return dataset
 
 # Parse the JSONL file and create a dataset
-dataset = parse_transcoder_jsonl('data/single_file/parallel/parallel_samples.jsonl')
+dataset = parse_transcoder_jsonl('data/file/parallel/parallel_samples.jsonl')
 
 # Print dataset information
 print("Number of samples:", len(dataset))
