@@ -1,6 +1,14 @@
 from coder.translator import CUDA2CTranslator
 from tools.compiler import CompilerCaller
+from util.config import logger
 if __name__ == "__main__":
+    # test reconstruct source
+    # compiler = CompilerCaller("c")
+    # parsed_info = compiler.parse_file("data/repo/c/test/computeCov3D.c")
+    # reconstructed_source = compiler.reconstruct_source(parsed_info)
+    # logger.info(reconstructed_source)
+    
+    # test build and run
     compiler = CompilerCaller("C")
     import os
     data_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
@@ -8,9 +16,17 @@ if __name__ == "__main__":
     target_func_name = "computeCov3D"
     # build_dir = compiler.build(position=data_folder, level="repo", lang="c", name=repo_name, target_func_name=target_func_name, inplace=False)
     # compiler.run_executable(build_dir, function_name=target_func_name)
-    compiler.lowering(position=data_folder, level="repo", lang="c", name=repo_name, target_func_name=target_func_name, inplace=False)
+    
+    # test preprocess code
+    # preprocessed_file = compiler.preprocess_code("data/repo/c/test")
+    # print(f"Preprocessed file generated at: {preprocessed_file}")
+    
+    # test lowering
+    compiler.lowering(position=data_folder, level="file", lang="c", name=repo_name, target_func_name=target_func_name, inplace=False)
     exit(0)
-    translator = CUDA2CTranslator(model="deepseek-coder")
+    
+    # test translate
+    translator = CUDA2CTranslator(model=DeepseekModel.CODER)
     translator.translate("""// Forward method for converting scale and rotation properties of each
 // Gaussian to a 3D covariance matrix in world space. Also takes care
 // of quaternion normalization.

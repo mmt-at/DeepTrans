@@ -4,6 +4,8 @@ import shutil
 import datetime
 import subprocess
 from util.config import logger
+import chardet
+from clang.cindex import Index, CursorKind, TranslationUnit
 
 class CompilerCaller:
     def __init__(self, language: str):
@@ -162,7 +164,8 @@ class CompilerCaller:
             with open(os.path.join(src_to_dir, relpath), 'r', encoding='utf-8') as file:
                 code_str = file.read()
             from coder.translator import LowerToAladdinTranslator
-            lower_to_aladdin_translator = LowerToAladdinTranslator()
+            from util.config import DeepseekModel
+            lower_to_aladdin_translator = LowerToAladdinTranslator(model=DeepseekModel.CODER)
             resp = lower_to_aladdin_translator.translate(code_str)
             
             # 解析翻译结果
@@ -228,3 +231,305 @@ class CompilerCaller:
 
     def compile_code(self, code: str):
         pass
+
+    def merge_files(self, src_dir: str) -> str:
+        """合并所有C源文件和头文件到一个文件中"""
+        # 存储所有的代码内容
+        merged_content = []
+        # 存储已处理的头文件，避免重复包含
+        processed_headers = set()
+        
+        def process_includes(file_content: str) -> tuple[str, list[str]]:
+            """处理include语句，返回处理后的内容和找到的本地头文件列表"""
+            lines = file_content.split('\n')
+            local_headers = []
+            processed_lines = []
+            
+            for line in lines:
+                if line.strip().startswith('#include'):
+                    if '"' in line:  # 本地头文件
+                        header = line.split('"')[1]
+                        local_headers.append(header)
+                    else:  # 系统头文件
+                        processed_lines.append(line)
+                else:
+                    processed_lines.append(line)
+                    
+            return '\n'.join(processed_lines), local_headers
+
+        def merge_file(file_path: str):
+            """递归处理文件及其依赖"""
+            if file_path in processed_headers:
+                return
+            
+            try:
+                # 明确指定使用 UTF-8 编码读取文件
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+            except UnicodeDecodeError:
+                # 如果 UTF-8 失败，尝试其他编码
+                try:
+                    with open(file_path, 'r', encoding='latin-1') as f:
+                        content = f.read()
+                except Exception as e:
+                    print(f"Error reading file {file_path}: {e}")
+                    return
+                
+            # 处理include语句
+            processed_content, headers = process_includes(content)
+            
+            # 递归处理本地头文件
+            for header in headers:
+                header_path = os.path.join(os.path.dirname(file_path), header)
+                if os.path.exists(header_path) and header_path not in processed_headers:
+                    merge_file(header_path)
+                    
+            processed_headers.add(file_path)
+            merged_content.append(processed_content)
+
+        # 查找所有.c文件
+        for root, _, files in os.walk(src_dir):
+            for file in files:
+                if file.endswith('.c'):
+                    file_path = os.path.join(root, file)
+                    merge_file(file_path)
+                    
+        return '\n\n'.join(merged_content)
+
+    def preprocess_code(self, src_dir: str, output_file: str = None):
+        """预处理代码，合并文件并展开宏"""
+        # 首先合并所有文件
+        merged_code = self.merge_files(src_dir)
+        
+        if output_file is None:
+            output_file = os.path.join(self.tmp_folder, "merged.c")
+            
+        # 写入合并后的代码
+        with open(output_file, 'w') as f:
+            f.write(merged_code)
+            
+        # 使用gcc预处理器展开宏
+        preprocessed_file = output_file + ".preprocessed"
+        os.system(f"gcc -E {output_file} -o {preprocessed_file}")
+        
+        return preprocessed_file
+
+    def detect_encoding(self, file_path):
+        with open(file_path, 'rb') as f:
+            raw = f.read()
+        return chardet.detect(raw)['encoding']
+
+    def get_source_text(self, node, file_content=None):
+        """从文件内容中获取节点的源代码文本"""
+        try:
+            if not node.extent or not node.extent.start or not node.extent.end:
+                return ''
+            
+            if file_content is None:
+                # 如果没有传入文件内容，尝试读取文件
+                if node.location and node.location.file:
+                    with open(str(node.location.file), 'r') as f:
+                        file_content = f.read()
+                else:
+                    return ''
+                
+            start_pos = node.extent.start
+            end_pos = node.extent.end
+            
+            if not start_pos.file or not end_pos.file:
+                return ''
+            
+            # 获取行列信息
+            start_line = start_pos.line - 1  # 转换为0基索引
+            start_col = start_pos.column - 1
+            end_line = end_pos.line - 1
+            end_col = end_pos.column - 1
+            
+            # 分割成行
+            lines = file_content.splitlines()
+            
+            # 如果是单行
+            if start_line == end_line:
+                if start_line < len(lines):
+                    return lines[start_line][start_col:end_col]
+                return ''
+            
+            # 如果是多行
+            text = []
+            for i in range(start_line, end_line + 1):
+                if i >= len(lines):
+                    break
+                if i == start_line:
+                    text.append(lines[i][start_col:])
+                elif i == end_line:
+                    text.append(lines[i][:end_col])
+                else:
+                    text.append(lines[i])
+                
+            return '\n'.join(text)
+            
+        except Exception as e:
+            logger.debug(f"获取源代码文本时出错: {e}")
+            return ''
+
+    def parse_file(self, filename):
+        abs_path = os.path.abspath(filename)
+        if not os.path.exists(abs_path):
+            logger.error(f"File not found: {abs_path}")
+            return None
+        
+        # 读取文件内容
+        try:
+            with open(abs_path, 'r', encoding='utf-8') as f:
+                file_content = f.read()
+        except UnicodeDecodeError:
+            # 如果UTF-8失败，尝试其他编码
+            with open(abs_path, 'r', encoding='latin-1') as f:
+                file_content = f.read()
+        
+        index = Index.create()
+        try:
+            # 添加更多编译选项以正确解析文件
+            tu = index.parse(abs_path, 
+                            args=['-x', 'c',  # 指定语言为C
+                                  f'-I{os.path.dirname(abs_path)}',  # 添加源文件目录到include路径
+                                  '-fparse-all-comments',  # 解析所有注释
+                                  '-Wno-everything'],  # 禁用所有警告
+                            options=TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD)
+            
+            if not tu:
+                logger.error("Failed to parse translation unit")
+                return None
+            
+            logger.info(f"Successfully parsed file: {abs_path}")
+            
+            def get_node_info(node):
+                # 只处理来自目标文件的节点
+                if (node.location.file and 
+                    os.path.abspath(str(node.location.file)) == abs_path):
+                    
+                    # 判断变量是否为全局变量
+                    is_global = (node.kind == CursorKind.VAR_DECL and 
+                                node.semantic_parent and 
+                                node.semantic_parent.kind == CursorKind.TRANSLATION_UNIT)
+                    
+                    info = {
+                        'spelling': node.spelling,
+                        'type': str(node.type.spelling) if hasattr(node, 'type') else '',
+                        'file': str(node.location.file) if node.location and node.location.file else None,
+                        'line': node.location.line if node.location else None,
+                        'column': node.location.column if node.location else None,
+                        'extent': None,
+                        'usr': node.get_usr() if hasattr(node, 'get_usr') else '',
+                        'source': self.get_source_text(node, file_content),
+                        'is_global': is_global  # 添加是否为全局变量的标记
+                    }
+                    
+                    if node.extent:
+                        info['extent'] = {
+                            'start': (node.extent.start.line, node.extent.start.column) if node.extent.start else None,
+                            'end': (node.extent.end.line, node.extent.end.column) if node.extent.end else None
+                        }
+                        
+                    return info
+                return None
+
+            # 用于存储解析结果的数据结构
+            parsed_info = {
+                'includes': [],
+                'structs': [],
+                'functions': [],
+                'variables': [],
+                'macros': [],
+                'source_map': {}
+            }
+            
+            def visit_nodes(node, depth=0):
+                try:
+                    # 只处理来自目标文件的节点
+                    if (node.location.file and 
+                        os.path.abspath(str(node.location.file)) == abs_path):
+                        
+                        info = get_node_info(node)
+                        if info:
+                            logger.debug('\n'.join([
+                                'Node Info:',
+                                f'  Spelling: {info["spelling"]}',
+                                f'  Type: {info["type"]}',
+                                f'  File: {info["file"]}',
+                                f'  Location: Line {info["line"]}, Column {info["column"]}',
+                                f'  Extent: {info["extent"]}',
+                                f'  USR: {info["usr"]}',
+                                f'  Source: {info["source"]}'
+                            ]))
+                            
+                            # 根据节点类型进行分类存储
+                            if node.kind == CursorKind.INCLUSION_DIRECTIVE:
+                                parsed_info['includes'].append(info)
+                            elif node.kind == CursorKind.FUNCTION_DECL:
+                                parsed_info['functions'].append(info)
+                            elif node.kind == CursorKind.VAR_DECL:
+                                parsed_info['variables'].append(info)
+                            elif node.kind == CursorKind.STRUCT_DECL:
+                                parsed_info['structs'].append(info)
+                            elif node.kind == CursorKind.MACRO_DEFINITION:
+                                parsed_info['macros'].append(info)
+                
+                    # 递归访问子节点
+                    for child in node.get_children():
+                        visit_nodes(child, depth + 1)
+                        
+                except Exception as e:
+                    logger.error(f"解析节点时出错: {str(e)}")
+                    logger.info("\n")
+            
+            visit_nodes(tu.cursor)
+            return parsed_info
+            
+        except Exception as e:
+            logger.error(f"解析文件时出错: {e}")
+            return None
+
+    def reconstruct_source(self, parsed_info):
+        """根据解析信息重建源代码"""
+        if not parsed_info:
+            logger.error("No parsed information available")
+            return ""
+        
+        source_lines = []
+        
+        # 添加包含指令
+        for include in parsed_info['includes']:
+            # 使用 source 而不是 name，因为现在我们存储的是完整的 include 信息
+            if 'source' in include:
+                source_lines.append(include['source'])
+        
+        source_lines.append('')  # 空行分隔
+        
+        # 添加宏定义
+        for macro in parsed_info['macros']:
+            if 'source' in macro:
+                source_lines.append(macro['source'])
+        
+        source_lines.append('')  # 空行分隔
+        
+        # 添加结构体定义
+        for struct in parsed_info['structs']:
+            if 'source' in struct:
+                source_lines.append(struct['source'])
+                source_lines.append('')
+        
+        # 添加全局变量
+        for var in parsed_info['variables']:
+            if 'source' in var:
+                source_lines.append(var['source'])
+        
+        source_lines.append('')  # 空行分隔
+        
+        # 添加函数
+        for func in parsed_info['functions']:
+            if 'source' in func:
+                source_lines.append(func['source'])
+                source_lines.append('')
+        
+        return '\n'.join(source_lines)

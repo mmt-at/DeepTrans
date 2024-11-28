@@ -1,12 +1,16 @@
 from util.config import logger
 from coder.analyzer import LangDesc
 from coder.codebase import CodeBase
+from util.config import (
+    GPTModel,
+    DeepseekModel
+)
 class Translator(CodeBase):
     @property
     def system_prompt(self):
         return f"You are a translator from {self.src_lang} to {self.tar_lang}."
     
-    def __init__(self, model="gpt-3.5-turbo", use_local=False, temperature=0.3, peft_model=""):
+    def __init__(self, model=GPTModel.GPT35_TURBO, use_local=False, temperature=0.3, peft_model=""):
         super().__init__(model, use_local, temperature, peft_model)
     
     def translate(self, code_str: str) -> str:
@@ -56,7 +60,7 @@ The following is the code to be translated:
 
 class CUDA2CTranslator(Translator):
     
-    def __init__(self, model="gpt-3.5-turbo", use_local=False, temperature=0.3, peft_model=""):
+    def __init__(self, model=GPTModel.GPT35_TURBO, use_local=False, temperature=0.3, peft_model=""):
         # self.src_lang = "CUDA"
         # self.tar_lang = "C"
         self.src_lang = LangDesc("CUDA", "12.1")
@@ -64,7 +68,7 @@ class CUDA2CTranslator(Translator):
         super().__init__(model, use_local, temperature, peft_model)
 
 class Python2CTranslator(Translator):
-    def __init__(self, model="gpt-3.5-turbo", use_local=False, temperature=0.3, peft_model=""):
+    def __init__(self, model=GPTModel.GPT35_TURBO, use_local=False, temperature=0.3, peft_model=""):
         # self.src_lang = "Python"
         # self.tar_lang = "C"
         self.src_lang = LangDesc("Python", "3.10")
@@ -72,7 +76,7 @@ class Python2CTranslator(Translator):
         super().__init__(model, use_local, temperature, peft_model)
 
 class CPP2PythonTranslator(Translator):
-    def __init__(self, model="gpt-3.5-turbo", use_local=False, temperature=0.3, peft_model=""):
+    def __init__(self, model=GPTModel.GPT35_TURBO, use_local=False, temperature=0.3, peft_model=""):
         # self.src_lang = "C++"
         # self.tar_lang = "Python"
         self.src_lang = LangDesc("C++", "11")
@@ -80,7 +84,7 @@ class CPP2PythonTranslator(Translator):
         super().__init__(model, use_local, temperature, peft_model)
 
 class LowerToAladdinTranslator(Translator):
-    def __init__(self, model="deepseek-coder", use_local=False, temperature=0.3, peft_model=""):
+    def __init__(self, model=DeepseekModel.CODER, use_local=False, temperature=0.3, peft_model=""):
         self.src_lang = LangDesc("C", "11")
         self.tar_lang = LangDesc("C", "11")
         super().__init__(model, use_local, temperature, peft_model)
@@ -90,10 +94,8 @@ class LowerToAladdinTranslator(Translator):
         return f"You are a coding assistant to add Aladdin Accelerator calls to the following {self.src_lang} code."
 
     def translate(self, code_str: str) -> str:
-        logger.info(f"Translating code from {self.src_lang} to {self.tar_lang}")
+        logger.info(f"Lowering code from {self.src_lang} to Aladdin")
         from coder.prompts import direct_replace_to_aladdin
         prompt = direct_replace_to_aladdin.format(code_str=code_str)
-        # logger.info(f"Prompt:\n{prompt}")
         resp = self.chat(prompt)
-        # logger.info(f"Lowering to Aladdin result:\n{resp}")
         return resp
