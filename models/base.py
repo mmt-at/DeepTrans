@@ -89,6 +89,8 @@ class ChatBase:
 
     @property
     def initial_messages(self):
+        if self.model == "o1-preview":
+            return []
         return [
             {
                 "role": "system",
@@ -202,6 +204,8 @@ class ChatBase:
             )
             rsp_content = message.content[0].text
         else:
+            if self.model in ["o1-preview", "o1-mini"]:
+                temperature = 1
             response = self.client.chat.completions.create(
                 model=self.model,
                 temperature=temperature,
