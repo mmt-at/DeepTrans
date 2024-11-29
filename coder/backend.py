@@ -178,6 +178,7 @@ void invokeSystolicArrayAndBlock(MetaData meta_data) {
         if file_path is None:
             import os
             file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "output", "aladdin_mock_gemm.h")
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'w') as f:
             f.write(header)
             f.write(body)
