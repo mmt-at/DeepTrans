@@ -126,7 +126,6 @@ void {func_name}(float *inputs, float *weights, float *outputs, MetaData meta_da
     for (int i = 0; i < meta_data.k * meta_data.n; i++) {{
         weights[i] = fp16(weights[i]);
     }}
-    accel data;
     data.input_base_addr = inputs;
     data.weight_base_addr = weights;
     data.output_base_addr = outputs;
@@ -234,7 +233,6 @@ void {func_name}(float *inputs, float *weights, float *outputs, MetaData meta_da
     for (int i = 0; i < meta_data.k; i++) {{
         weights[i] = fp16(weights[i]);
     }}
-    accel data;
     data.input_base_addr = inputs;
     data.weight_base_addr = weights;
     data.output_base_addr = outputs;
@@ -315,7 +313,6 @@ void {func_name}(float *inputs, float *weights, float *outputs, MetaData meta_da
     for (int i = 0; i < meta_data.k; i++) {{
         weights[i] = fp16(weights[i]);
     }}
-    accel data;
     data.input_base_addr = inputs;
     data.weight_base_addr = weights;
     data.output_base_addr = outputs;
