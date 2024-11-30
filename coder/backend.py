@@ -173,84 +173,6 @@ void invokeSystolicArrayAndBlock(MetaData meta_data) {
 """
         return header, body
 
-    @staticmethod
-    def aladdin_mock_vector_vector_template(data_type: str = "float16",
-                                       input_dims: list[int] = [16],
-                                       weight_dims: list[int] = [16],
-                                       func_name: str = None,
-                                       check_code: str = ""):
-        if func_name is None:
-            func_name = f"aladdin_vector_vector_{TemplateFiller._id}"
-            TemplateFiller._id += 1
-        header = """
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-
-typedef float float16;
-
-float16 fp16(float fp32_data) { return fp32_data; }
-float fp32(float16 fp16_data) { return fp16_data; }
-
-struct accel {
-    void* input_base_addr;
-    int input_size;
-    void* weight_base_addr;
-    int weight_size;
-    void* output_base_addr;
-    int output_size;
-};
-
-struct accel data;
-
-struct MetaData {
-    int m, k, n;
-    int operation_type; // 0: vector-vector, 1: matrix-vector, 2: matrix-matrix
-};
-
-void mapArrayToAccelerator(void *base_addr, size_t size) {
-    return;
-}
-
-void invokeSystolicArrayAndBlock(MetaData meta_data) {
-    if (meta_data.operation_type == 0) {
-        // Vector-Vector Multiplication
-        float result = 0;
-        for (int i = 0; i < meta_data.k; i++) {
-            result += ((float*)data.input_base_addr)[i] * ((float*)data.weight_base_addr)[i];
-        }
-        ((float*)data.output_base_addr)[0] = result;
-    }
-}
-
-"""
-        body = f"""
-void {func_name}(float *inputs, float *weights, float *outputs, MetaData meta_data) {{
-    for (int i = 0; i < meta_data.k; i++) {{
-        inputs[i] = fp16(inputs[i]);
-    }}
-    for (int i = 0; i < meta_data.k; i++) {{
-        weights[i] = fp16(weights[i]);
-    }}
-    data.input_base_addr = inputs;
-    data.weight_base_addr = weights;
-    data.output_base_addr = outputs;
-    data.input_size = meta_data.k;
-    data.weight_size = meta_data.k;
-    data.output_size = 1;
-    mapArrayToAccelerator(
-        data.input_base_addr, data.input_size * sizeof(float16));
-    mapArrayToAccelerator(
-        data.weight_base_addr, data.weight_size * sizeof(float16));
-    mapArrayToAccelerator(
-        data.output_base_addr, data.output_size * sizeof(float16));
-    invokeSystolicArrayAndBlock(meta_data);
-    outputs[0] = fp32(((float*)data.output_base_addr)[0]);
-    {check_code}
-}}
-"""
-        return header, body
 
     @staticmethod
     def aladdin_mock_matrix_vector_template(data_type: str = "float16",
@@ -284,8 +206,7 @@ struct accel {
 struct accel data;
 
 struct MetaData {
-    int m, k, n;
-    int operation_type; // 0: vector-vector, 1: matrix-vector, 2: matrix-matrix
+    int m, n;
 };
 
 void mapArrayToAccelerator(void *base_addr, size_t size) {
@@ -293,13 +214,10 @@ void mapArrayToAccelerator(void *base_addr, size_t size) {
 }
 
 void invokeSystolicArrayAndBlock(MetaData meta_data) {
-    if (meta_data.operation_type == 1) {
-        // Matrix-Vector Multiplication
-        for (int i = 0; i < meta_data.m; i++) {
-            ((float*)data.output_base_addr)[i] = 0;
-            for (int k = 0; k < meta_data.k; k++) {
-                ((float*)data.output_base_addr)[i] += ((float*)data.input_base_addr)[i * meta_data.k + k] * ((float*)data.weight_base_addr)[k];
-            }
+    for (int i = 0; i < meta_data.m; i++) {
+        ((float*)data.output_base_addr)[i] = 0;
+        for (int j = 0; j < meta_data.n; j++) {
+            ((float*)data.output_base_addr)[i] += ((float*)data.input_base_addr)[i * meta_data.n + j] * ((float*)data.weight_base_addr)[j];
         }
     }
 }
@@ -310,14 +228,14 @@ void {func_name}(float *inputs, float *weights, float *outputs, MetaData meta_da
     for (int i = 0; i < meta_data.m * meta_data.k; i++) {{
         inputs[i] = fp16(inputs[i]);
     }}
-    for (int i = 0; i < meta_data.k; i++) {{
+    for (int i = 0; i < meta_data.n; i++) {{
         weights[i] = fp16(weights[i]);
     }}
     data.input_base_addr = inputs;
     data.weight_base_addr = weights;
     data.output_base_addr = outputs;
-    data.input_size = meta_data.m * meta_data.k;
-    data.weight_size = meta_data.k;
+    data.input_size = meta_data.m * meta_data.n;
+    data.weight_size = meta_data.n;
     data.output_size = meta_data.m;
     mapArrayToAccelerator(
         data.input_base_addr, data.input_size * sizeof(float16));
