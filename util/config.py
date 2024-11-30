@@ -9,6 +9,13 @@ DEEPSEEK_API_KEY=os.getenv("DEEPSEEK_API_KEY")
 OLLAMA_API_KEY=os.getenv("OLLAMA_API_KEY")
 from enum import Enum, auto
 
+class Language(Enum):
+    C = "c"
+    CPP = "c++"
+    PYTHON = "python"
+    JAVA = "java"
+    CUDA = "cuda"
+
 class PPLXModel(str, Enum):
     MIXTRAL = "mixtral-8x7b-instruct"
     LLAMA_SONAR_LARGE = "llama-3.1-sonar-large-128k-chat"

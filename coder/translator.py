@@ -3,7 +3,8 @@ from coder.analyzer import LangDesc
 from coder.codebase import CodeBase
 from util.config import (
     GPTModel,
-    DeepseekModel
+    DeepseekModel,
+    Language
 )
 class Translator(CodeBase):
     @property
@@ -63,30 +64,28 @@ class CUDA2CTranslator(Translator):
     def __init__(self, model=GPTModel.GPT35_TURBO, use_local=False, temperature=0.3, peft_model=""):
         # self.src_lang = "CUDA"
         # self.tar_lang = "C"
-        self.src_lang = LangDesc("CUDA", "12.1")
-        self.tar_lang = LangDesc("C", "11")
+        self.src_lang = LangDesc(Language.CUDA, "12.1")
+        self.tar_lang = LangDesc(Language.C, "11")
         super().__init__(model, use_local, temperature, peft_model)
 
 class Python2CTranslator(Translator):
     def __init__(self, model=GPTModel.GPT35_TURBO, use_local=False, temperature=0.3, peft_model=""):
         # self.src_lang = "Python"
         # self.tar_lang = "C"
-        self.src_lang = LangDesc("Python", "3.10")
-        self.tar_lang = LangDesc("C", "11")
+        self.src_lang = LangDesc(Language.PYTHON, "3.10")
+        self.tar_lang = LangDesc(Language.C, "11")
         super().__init__(model, use_local, temperature, peft_model)
 
 class CPP2PythonTranslator(Translator):
     def __init__(self, model=GPTModel.GPT35_TURBO, use_local=False, temperature=0.3, peft_model=""):
-        # self.src_lang = "C++"
-        # self.tar_lang = "Python"
-        self.src_lang = LangDesc("C++", "11")
-        self.tar_lang = LangDesc("Python", "3.10")
+        self.src_lang = LangDesc(Language.CPP, "11")
+        self.tar_lang = LangDesc(Language.PYTHON, "3.10")
         super().__init__(model, use_local, temperature, peft_model)
 
 class LowerToAladdinTranslator(Translator):
     def __init__(self, model=DeepseekModel.CODER, use_local=False, temperature=0.3, peft_model=""):
-        self.src_lang = LangDesc("C", "11")
-        self.tar_lang = LangDesc("C", "11")
+        self.src_lang = LangDesc(Language.C, "11")
+        self.tar_lang = LangDesc(Language.C, "11")
         super().__init__(model, use_local, temperature, peft_model)
 
     @property

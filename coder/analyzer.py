@@ -1,6 +1,7 @@
 from coder.codebase import CodeBase
 from typing import List
 from coder.backend import TemplateFiller
+from util.config import Language
 
 class SlicingAgent(CodeBase):
     def __init__(
@@ -26,7 +27,7 @@ class Location:
             self.end_line = end_line
 
 class LangDesc:
-    def __init__(self, language: str, version_id: str):
+    def __init__(self, language: Language, version_id: str):
         self.language = language
         self.version_id = version_id
 
@@ -41,7 +42,7 @@ class Node:
 
 class CodeFragment(Node):
     def __init__(self, lang_desc: LangDesc, location: Location, code_str: str):
-        if lang_desc.language not in ["C++", "Python", "Java", "CUDA", "C"]:
+        if lang_desc.language not in [Language.CPP, Language.PYTHON, Language.JAVA, Language.CUDA, Language.C]:
             raise ValueError(f"Language {lang_desc.language} is not supported")
         self.lang_desc = lang_desc
         self.location = location
@@ -81,11 +82,11 @@ class Tracer:
     pass
 
 class Executor:
-    def __init__(self, target_language: str):
+    def __init__(self, target_language: Language):
         self.target_language = target_language
 
     @property
-    def target_language(self) -> str:
+    def target_language(self) -> Language:
         return self.target_language
 
     def execute(self, context: Context) -> str:
