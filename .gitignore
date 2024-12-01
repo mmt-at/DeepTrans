@@ -19,8 +19,6 @@
 .vscode/*
 tmp/**
 tmp/*
-tests/**
-tests/*
 data/output
 data/output/**
 data/output/*
