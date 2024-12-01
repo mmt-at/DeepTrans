@@ -9,10 +9,12 @@ from util.config import (
 class Translator(CodeBase):
     @property
     def system_prompt(self):
-        return f"You are a translator from {self.src_lang} to {self.tar_lang}."
+        return f"""You are a code translator from {self.src_lang} to {self.tar_lang}."""
     
-    def __init__(self, model=GPTModel.GPT35_TURBO, use_local=False, temperature=0.3, peft_model=""):
+    def __init__(self, model=GPTModel.GPT35_TURBO, use_local=False, temperature=0.3, peft_model="", src_lang=Language.CPP, tar_lang=Language.PYTHON):
         super().__init__(model, use_local, temperature, peft_model)
+        self.src_lang =src_lang
+        self.tar_lang = tar_lang
     
     def translate(self, code_str: str) -> str:
         logger.info(f"Translating code from {self.src_lang} to {self.tar_lang}")
