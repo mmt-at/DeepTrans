@@ -175,13 +175,13 @@ void invokeSystolicArrayAndBlock(MetaData meta_data) {
 
 
     @staticmethod
-    def aladdin_mock_matrix_vector_template(data_type: str = "float16",
+    def aladdin_mock_gemv_template(data_type: str = "float16",
                                        input_dims: list[int] = [16, 16],
                                        weight_dims: list[int] = [16],
                                        func_name: str = None,
                                        check_code: str = ""):
         if func_name is None:
-            func_name = f"aladdin_matrix_vector_{TemplateFiller._id}"
+            func_name = f"gemv_mock"
             TemplateFiller._id += 1
         header = """
 #include <stdio.h>
@@ -206,7 +206,7 @@ struct accel {
 struct accel data;
 
 struct MetaData {
-    int m, n;
+    int m, n, k;
 };
 
 void mapArrayToAccelerator(void *base_addr, size_t size) {
@@ -217,7 +217,8 @@ void invokeSystolicArrayAndBlock(MetaData meta_data) {
     for (int i = 0; i < meta_data.m; i++) {
         ((float*)data.output_base_addr)[i] = 0;
         for (int j = 0; j < meta_data.n; j++) {
-            ((float*)data.output_base_addr)[i] += ((float*)data.input_base_addr)[i * meta_data.n + j] * ((float*)data.weight_base_addr)[j];
+            // column-major matrix 
+            ((float*)data.output_base_addr)[i] += ((float*)data.input_base_addr)[j * meta_data.m + i] * ((float*)data.weight_base_addr)[j];
         }
     }
 }
@@ -253,10 +254,10 @@ void {func_name}(float *inputs, float *weights, float *outputs, MetaData meta_da
         return header, body
     
     def aladdin_mock_gemm_to_file(file_path: str = None):
-        header, body = TemplateFiller.aladdin_mock_gemm_template()
+        header, body = TemplateFiller.aladdin_mock_gemv_template()
         if file_path is None:
             import os
-            file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "output", "aladdin_mock_gemm.h")
+            file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "output", "aladdin_mock_gemv.h")
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'w') as f:
             f.write(header)

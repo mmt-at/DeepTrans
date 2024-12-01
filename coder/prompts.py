@@ -6,11 +6,21 @@ coding_system_prompt = """
 You are a helpful coding assistant. You will follow the user's instructions to complete the task.
 """
 direct_replace_to_aladdin = """
-Translate the following C code by embedding `gemm_mock` calls. The `gemm_mock` API is defined as:
+Translate the following C code by embedding matrix multiplication calls and matrix-vector multiplication calls. The APIs are defined as:
 ```c
-void gemm_mock(int m, int k, int n, const float* A, const float* B, float* C);
+struct MetaData {{
+    int m, n, k;
+}};
+void gemm_mock(const float* A, const float* B, float* C, MetaData meta_data);
 ```
 The operation is equivalent to `C = A * B`, where `A` is an `m×k` matrix, `B` is a `k×n` matrix, and `C` is an `m×n` matrix.
+
+```c
+void gemv_mock(const float* A, const float* x, float* y, MetaData meta_data);
+```
+The operation is equivalent to `y = A * x`, where n = 1, `A` is an `m×k` column-major matrix, `x` is an `k×1` vector, and `y` is an `m×1` vector. Sometimes, `x`is not a `k×1` vector which is homogenized to a `k×1` vector by adding a 1 at the end.
+
+The matrix multiplication operation is not always directly visible in the code. In such cases, you need to identify the matrix multiplication patterns and replace them with the corresponding `gemm_mock` or `gemv_mock` calls.
 
 **Steps:**
 
@@ -20,6 +30,7 @@ The operation is equivalent to `C = A * B`, where `A` is an `m×k` matrix, `B` i
 
 3. **Pattern Matching and Replacement:**
    - For code fragments containing matrix multiplication patterns, replace with `gemm_mock` calls and mark as `replace_gemm_fragments_{{number}}`.
+   - For code fragments containing matrix-vector multiplication patterns, replace with `gemv_mock` calls and mark as `replace_gemv_fragments_{{number}}`.
    - For other code fragments, keep original code and mark as `function_fragments`.
 
 4. **Output Format:** Output all code fragments sequentially using the following categories, ensuring the combined fragments exactly match the original function.
@@ -34,7 +45,9 @@ The operation is equivalent to `C = A * B`, where `A` is an `m×k` matrix, `B` i
 
 Please prefix each code fragment with its corresponding label.
 
-**Example:**
+The followings are two examples to help you understand the task better.
+
+**Example1:**
 
 For input code:
 ```c
@@ -122,6 +135,78 @@ int main() {{
     int m = 3, n = 3, k = 3;
     return test(m, n, k);
 }}
+```
+
+**Example2:**
+
+For input code:
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+
+void test3(int m, int n, int k) {{
+    float MA[m * k] = {{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}};
+    float VB[k * n] = {{1, 2, 3, 4}};
+    float VC[m * n] = {{
+        MA[0] * VB[0] + MA[4] * VB[2] + MA[8] * VB[3] + MA[12] * VB[4],
+        MA[1] * VB[0] + MA[5] * VB[2] + MA[9] * VB[3] + MA[13] * VB[4],
+        MA[2] * VB[0] + MA[6] * VB[2] + MA[10] * VB[3] + MA[14] *  VB[4],  
+    }};
+
+    return;
+}}   
+
+int main() {{
+    int m = 3, n = 1, k = 4;
+    test3(m, n, k);
+    return 0;
+}}
+```
+
+Expected output format:
+
+# include_fragments
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+```
+# function_fragments
+```c
+void test3(int m, int n, int k) {{
+    float MA[m * k] = {{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}};
+    float VB[k * n] = {{1, 2, 3, 4}};
+```
+# match_gemm_fragments_3
+```c
+    float VC[m * n] = {{
+        MA[0] * VB[0] + MA[4] * VB[2] + MA[8] * VB[3] + MA[12] * VB[4],
+        MA[1] * VB[0] + MA[5] * VB[2] + MA[9] * VB[3] + MA[13] * VB[4],
+        MA[2] * VB[0] + MA[6] * VB[2] + MA[10] * VB[3] + MA[14] *  VB[4],  
+    }};
+```
+- replace_gemm_fragments_3
+```c
+    MetaData meta_data;
+    meta_data.m = m;
+    meta_data.n = n;
+    meta_data.k = k;
+    gemv_mock(MA, VB, VC, meta_data);
+```
+# function_fragments
+```c
+    return;
+}}
+```
+# no_match_function
+```c
+int main() {{
+    int m = 3, n = 1, k = 4;
+    test3(m, n, k);
+    return 0;
+}}
+```
 
 
 **Code to be transformed:**

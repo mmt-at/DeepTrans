@@ -13,7 +13,7 @@ if __name__ == "__main__":
     import os
     data_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
     repo_name = "test"
-    target_func_name = "computeCov3D"
+    target_func_name = "cpu_rasterizer_transformPoint4x3"
     # build_dir = compiler.build(position=data_folder, level="repo", lang="c", name=repo_name, target_func_name=target_func_name, inplace=False)
     # compiler.run_executable(build_dir, function_name=target_func_name)
     
