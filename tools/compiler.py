@@ -200,7 +200,11 @@ class CompilerCaller:
                         replaced_fragments.append(code)
                     elif current_section.startswith('match_gemm_fragments_'):
                         original_fragments.append(code)
+                    elif current_section.startswith('match_gemv_fragments_'):
+                        original_fragments.append(code)
                     elif current_section.startswith('replace_gemm_fragments_'):
+                        replaced_fragments.append(code)
+                    elif current_section.startswith('replace_gemv_fragments_'):
                         replaced_fragments.append(code)
                     elif current_section == 'no_match_function':
                         original_fragments.append(code)

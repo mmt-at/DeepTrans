@@ -4,9 +4,8 @@ typedef struct {
     float x, y, z;
 } float3;
 
+// 添加函数computeCov2D的声明
 float3 computeCov2D(const float3 mean, float focal_x, float focal_y, float tan_fovx, float tan_fovy, const float *cov3D, const float *viewmatrix);
-
-float3 cpu_rasterizer_transformPoint4x3(const float3 p, const float* matrix);
 
 float3 computeCov2D(const float3 mean, float focal_x, float focal_y, float tan_fovx, float tan_fovy, const float *cov3D, const float *viewmatrix)
 {
