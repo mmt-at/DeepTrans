@@ -22,7 +22,6 @@ void gemv_mock(const float* A, const float* x, float* y, MetaData meta_data);
 ```
 This operation is equivalent to `y = A * x`, where n = 1, `A` is an `m×k` column-major matrix, `x` is an `k×1` vector, and `y` is an `m×1` vector. Sometimes, `x`is not a `k×1` vector which is homogenized to a `k×1` vector by adding a 1 at the end.
 
-
 Please follow the steps below to complete the translation task:
 **Steps:**
 
