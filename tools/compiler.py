@@ -231,6 +231,13 @@ class CompilerCaller:
             logger.debug(f"replaced_complete_code_dict: {replaced_complete_code_dict}")
             with open(os.path.join(src_to_dir, relpath), 'w', encoding='utf-8') as file:
                 file.write(resp)
+
+            # complete code写到 /data/tmp/repo/c/test
+            tmp_repo_dir = os.path.join(self.tmp_folder, 'repo', lang, name)
+            os.makedirs(os.path.dirname(os.path.join(tmp_repo_dir, relpath)), exist_ok=True)
+            with open(os.path.join(tmp_repo_dir, relpath), 'w', encoding='utf-8') as tmp_repo_file:
+                tmp_repo_file.write(replaced_complete_code)
+
         return src_to_dir, original_fragments_dict, complete_code_dict, replaced_fragments_dict, replaced_complete_code_dict
 
     def compile_code(self, code: str):

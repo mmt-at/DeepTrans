@@ -85,7 +85,7 @@ class CPP2PythonTranslator(Translator):
         super().__init__(model, use_local, temperature, peft_model)
 
 class LowerToAladdinTranslator(Translator):
-    def __init__(self, model=DeepseekModel.CODER, use_local=False, temperature=0.3, peft_model=""):
+    def __init__(self, model=DeepseekModel.CODER, use_local=False, temperature=0, peft_model=""):
         self.src_lang = LangDesc(Language.C, "11")
         self.tar_lang = LangDesc(Language.C, "11")
         super().__init__(model, use_local, temperature, peft_model)

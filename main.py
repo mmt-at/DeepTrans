@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # test lowering
     compiler.lowering(position=data_folder, level="file", lang="c", name=repo_name, target_func_name=target_func_name, inplace=False)
     exit(0)
-    
+
     # test translate
     translator = CUDA2CTranslator(model=DeepseekModel.CODER)
     translator.translate("""// Forward method for converting scale and rotation properties of each

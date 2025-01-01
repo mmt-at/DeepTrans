@@ -104,10 +104,10 @@ class CppTestGenerator(TestGenerator):
         logger.info(f"Generating tests for {self.src_lang.name} code")
         # TODO: use relative path
         input_example = open(
-            "/Users/zhangshuoming/workspace/DeepTrans/dev/one_shot/cpp_example.cpp"
+            "../dev/one_shot/cpp_example.cpp"
         ).read()
         output_example = open(
-            "/Users/zhangshuoming/workspace/DeepTrans/dev/one_shot/cpp_testgen.cpp"
+            "../dev/one_shot/cpp_testgen.cpp"
         ).read()
         prompt = f"""
 You are about to generate unittest for the following {self.src_lang.name} code.
@@ -182,3 +182,70 @@ class PythonTestGenerator(TestGenerator):
     # TODO: specify one-shot example
     def generate_tests(self, code_str) -> str:
         return super().generate_tests(code_str)
+
+
+class AladdinTestGenerator(TestGenerator):
+    def __init__(
+        self,
+        model=DeepseekModel.CODER,
+        use_local=False,
+        temperature=0,
+        peft_model="",
+        src_lang=Language.C,
+    ):
+        super().__init__(model, use_local, temperature, peft_model, src_lang)
+
+    def generate_tests(self, code_str) -> str:
+        logger.info(f"Generating tests for {self.src_lang.name} code")
+
+        input_example = open(
+            "../dev/one_shot/c_example.c"
+        ).read()
+        output_example = open(
+            "../dev/one_shot/c_testgen.c"
+        ).read()
+        prompt = f"""
+You are about to generate unittest for the following {self.src_lang.name} code using a Given-When-Then approach.
+Please follow these rules:
+1. Ensure the tests call the functions in the provided code.
+2. Include at least 10 test cases managed by loop, except for trivial cases.
+3. Each test should follow the Given-When-Then framework:
+   - Given: Set up any necessary conditions or inputs.
+   - When: Perform the action (calling the function).
+   - Then: Verify/print the output or outcome.
+4. Wrap the result between '```test' and '```'.
+5. Add the header file of the tested function, remove the function definition in the test code.
+Output the synthesized unittest code here:
+```test
+<the unittest code>
+```
+An example of the unittest code is as follows:
+###Example begin###
+You are about to generate unit tests for the following c++ code.
+Example input:
+```{self.src_lang.value}
+{input_example}
+```
+Example output(you should only generate the following part):
+```test
+{output_example}
+```
+###Example end###
+The following is the actual input code to generate tests for:
+```{self.src_lang.value}
+{code_str}
+```
+"""
+        resp = self.chat(prompt)
+        logger.debug(f"Generated tests: {resp}")
+        test_code = resp.split("```test")[1].split("```")[0]
+        return test_code
+    
+
+if __name__ == "__main__":
+    input = open(
+        "../data/file/c/test/computeCov3D.c"
+    ).read()
+    AladdinTestGenerator().generate_tests(input)
+
+# computeCov3D.c
